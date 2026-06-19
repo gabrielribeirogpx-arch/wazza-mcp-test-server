@@ -1,6 +1,6 @@
 # Wazza MCP Test Server
 
-Servidor HTTP simples para validar a infraestrutura MCP do Wazza como cliente MCP. Ele expõe endpoints diretos para descoberta e chamada de ferramentas, permitindo testar o fluxo de cadastro, `tools/list`, persistência, exibição, `tools/call`, retorno ao IA Agent e observabilidade/replay no Wazza.
+Servidor HTTP simples para validar a infraestrutura MCP do Wazza como cliente MCP. Ele expõe endpoints HTTP simples para descoberta e chamada de ferramentas e também aceita MCP JSON-RPC 2.0 via `POST /`, permitindo testar o fluxo de cadastro, `tools/list`, persistência, exibição, `tools/call`, retorno ao IA Agent e observabilidade/replay no Wazza.
 
 ## Stack
 
@@ -39,6 +39,17 @@ A aplicação ficará disponível em `http://localhost:8080`.
 3. Defina a variável de ambiente `PORT` se necessário. O servidor usa `PORT` e faz fallback para `8080`.
 4. Faça o deploy.
 5. Cadastre a URL pública gerada pelo Railway na tela de Integrações de IA do Wazza.
+
+
+## Interfaces suportadas
+
+O servidor mantém duas formas de integração:
+
+- Endpoints HTTP simples:
+  - `GET /` para health check.
+  - `POST /tools/list` para listar ferramentas.
+  - `POST /tools/call` para chamar uma ferramenta.
+- MCP JSON-RPC 2.0 via `POST /` para clientes que enviam os métodos MCP diretamente para a raiz do servidor.
 
 ## Exemplos curl
 
@@ -97,6 +108,66 @@ Resposta esperada:
       "text": "25"
     }
   ]
+}
+```
+
+### POST / MCP JSON-RPC initialize
+
+```bash
+curl -X POST http://localhost:8080/ \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+```
+
+Resposta esperada:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "wazza-mcp-test-server",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+### POST / MCP JSON-RPC tools/list
+
+```bash
+curl -X POST http://localhost:8080/ \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+```
+
+### POST / MCP JSON-RPC tools/call
+
+```bash
+curl -X POST http://localhost:8080/ \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"text":"Olá"}}}'
+```
+
+Resposta esperada:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Olá"
+      }
+    ]
+  }
 }
 ```
 

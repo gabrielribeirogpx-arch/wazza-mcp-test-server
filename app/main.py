@@ -21,8 +21,8 @@ def health_check() -> dict[str, str]:
     return {"status": "ok", "server": "wazza-mcp-test-server"}
 
 
-@app.post("/")
-def json_rpc_endpoint(request: dict[str, Any]) -> dict[str, Any] | JSONResponse:
+@app.post("/", response_model=None)
+def json_rpc_endpoint(request: dict[str, Any]):
     """Handle MCP JSON-RPC requests sent to the server root."""
     request_id = request.get("id")
     method = request.get("method")

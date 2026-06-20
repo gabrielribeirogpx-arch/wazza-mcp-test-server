@@ -3,7 +3,7 @@ from collections.abc import Callable
 from pydantic import ValidationError
 
 from app.schemas import ToolCallResponse, ToolDefinition
-from app.tools import business_hours, calculator, echo
+from app.tools import business_hours, calculator, calendar, echo
 
 ToolExecutor = Callable[[dict[str, object]], ToolCallResponse]
 
@@ -16,6 +16,13 @@ _TOOLS: dict[str, tuple[ToolDefinition, ToolExecutor]] = {
     echo.TOOL_DEFINITION.name: (echo.TOOL_DEFINITION, echo.execute),
     business_hours.TOOL_DEFINITION.name: (business_hours.TOOL_DEFINITION, business_hours.execute),
     calculator.TOOL_DEFINITION.name: (calculator.TOOL_DEFINITION, calculator.execute),
+    calendar.LIST_EVENTS_TOOL_DEFINITION.name: (calendar.LIST_EVENTS_TOOL_DEFINITION, calendar.list_events),
+    calendar.CREATE_EVENT_TOOL_DEFINITION.name: (calendar.CREATE_EVENT_TOOL_DEFINITION, calendar.create_event),
+    calendar.CHECK_AVAILABILITY_TOOL_DEFINITION.name: (
+        calendar.CHECK_AVAILABILITY_TOOL_DEFINITION,
+        calendar.check_availability,
+    ),
+    calendar.DELETE_EVENT_TOOL_DEFINITION.name: (calendar.DELETE_EVENT_TOOL_DEFINITION, calendar.delete_event),
 }
 
 

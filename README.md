@@ -262,13 +262,171 @@ Resposta esperada:
 
 ## Erros
 
-Erros de ferramenta retornam o formato:
+Erros de métodos JSON-RPC não relacionados à execução de ferramenta continuam retornando `error` no envelope JSON-RPC. Erros de `tools/call` retornam `content` e `structuredContent.ok=false`, conforme o exemplo na seção de respostas estruturadas.
+
+## Respostas estruturadas MCP
+
+Todas as ferramentas mantêm compatibilidade com o formato MCP textual em `content[].text` e também retornam `structuredContent` para facilitar respostas naturais do IA Agent.
+
+### Exemplo calculate
 
 ```json
 {
-  "error": {
-    "code": "tool_error",
-    "message": "Descrição do erro"
+  "content": [
+    {
+      "type": "text",
+      "text": "O resultado é 699678."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calculate",
+    "result": {
+      "expression": "1234 * 567",
+      "value": 699678
+    }
+  }
+}
+```
+
+### Exemplo get_business_hours
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Atendemos de segunda a sexta, das 08h às 18h."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "get_business_hours",
+    "result": {
+      "days": "segunda a sexta",
+      "opens": "08:00",
+      "closes": "18:00",
+      "timezone": "America/Sao_Paulo"
+    }
+  }
+}
+```
+
+### Exemplo calendar_create_event
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Evento criado: Reunião com João em amanhã às 14:00 por 60 minutos."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calendar_create_event",
+    "result": {
+      "event_id": "evt_1",
+      "title": "Reunião com João",
+      "date": "amanhã",
+      "time": "14:00",
+      "duration_minutes": 60,
+      "attendees": [],
+      "description": ""
+    }
+  }
+}
+```
+
+### Exemplo calendar_list_events
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Eventos simulados:\n- evt_1: Reunião com João em amanhã às 14:00 por 60 minutos."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calendar_list_events",
+    "result": {
+      "date": "amanhã",
+      "events": [
+        {
+          "event_id": "evt_1",
+          "title": "Reunião com João",
+          "date": "amanhã",
+          "time": "14:00",
+          "duration_minutes": 60
+        }
+      ]
+    }
+  }
+}
+```
+
+### Exemplo calendar_check_availability
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Horários disponíveis em amanhã: 09:00, 10:30, 14:00 e 16:00."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calendar_check_availability",
+    "result": {
+      "date": "amanhã",
+      "duration_minutes": 60,
+      "available_slots": ["09:00", "10:30", "14:00", "16:00"]
+    }
+  }
+}
+```
+
+### Exemplo calendar_delete_event
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Evento evt_1 removido com sucesso."
+    }
+  ],
+  "structuredContent": {
+    "ok": true,
+    "tool": "calendar_delete_event",
+    "result": {
+      "event_id": "evt_1",
+      "deleted": true
+    }
+  }
+}
+```
+
+### Exemplo de erro de ferramenta
+
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Não foi possível executar a ferramenta: Expressão inválida: divisão por zero não é permitida."
+    }
+  ],
+  "structuredContent": {
+    "ok": false,
+    "tool": "calculate",
+    "error": {
+      "code": "tool_error",
+      "message": "Expressão inválida: divisão por zero não é permitida."
+    }
   }
 }
 ```

@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.schemas import TextContent, ToolCallResponse, ToolDefinition
+from app.schemas import StructuredContent, TextContent, ToolCallResponse, ToolDefinition
 
 # Armazenamento fake em memória para testes do IA Agent do Wazza.
 # TODO: substituir esta camada por integração real com Google Calendar API + OAuth.
@@ -96,18 +96,25 @@ def list_events(arguments: dict[str, object]) -> ToolCallResponse:
     if parsed.date:
         events = [event for event in events if event["date"] == parsed.date]
 
+    event_summaries = [_event_summary(event) for event in events]
+    result = {"date": parsed.date, "events": event_summaries}
+
     if not events:
         date_text = f" em {parsed.date}" if parsed.date else ""
-        return _text_response(f"Nenhum evento simulado encontrado{date_text}.")
+        return _tool_response(
+            "calendar_list_events",
+            f"Nenhum evento simulado encontrado{date_text}.",
+            result,
+        )
 
     lines = [
         (
             f'- {event["event_id"]}: {event["title"]} em {event["date"]} '
             f'às {event["time"]} por {event["duration_minutes"]} minutos.'
         )
-        for event in events
+        for event in event_summaries
     ]
-    return _text_response("Eventos simulados:\n" + "\n".join(lines))
+    return _tool_response("calendar_list_events", "Eventos simulados:\n" + "\n".join(lines), result)
 
 
 def create_event(arguments: dict[str, object]) -> ToolCallResponse:
@@ -120,26 +127,52 @@ def create_event(arguments: dict[str, object]) -> ToolCallResponse:
         "time": parsed.time,
         "duration_minutes": parsed.duration_minutes,
         "attendees": parsed.attendees,
-        "description": parsed.description,
+        "description": parsed.description or "",
     }
-    return _text_response(
-        f"Evento criado: {parsed.title} em {parsed.date} às {parsed.time} por {parsed.duration_minutes} minutos."
+    return _tool_response(
+        "calendar_create_event",
+        f"Evento criado: {parsed.title} em {parsed.date} às {parsed.time} por {parsed.duration_minutes} minutos.",
+        _EVENTS[event_id].copy(),
     )
 
 
 def check_availability(arguments: dict[str, object]) -> ToolCallResponse:
     parsed = CalendarCheckAvailabilityArguments.model_validate(arguments)
     # Disponibilidade fake para testes. TODO: calcular slots reais via Google Calendar API.
-    return _text_response(
-        f"Horários disponíveis em {parsed.date}: 09:00, 10:30, 14:00 e 16:00."
+    available_slots = ["09:00", "10:30", "14:00", "16:00"]
+    return _tool_response(
+        "calendar_check_availability",
+        f"Horários disponíveis em {parsed.date}: 09:00, 10:30, 14:00 e 16:00.",
+        {
+            "date": parsed.date,
+            "duration_minutes": parsed.duration_minutes,
+            "available_slots": available_slots,
+        },
     )
 
 
 def delete_event(arguments: dict[str, object]) -> ToolCallResponse:
     parsed = CalendarDeleteEventArguments.model_validate(arguments)
     _EVENTS.pop(parsed.event_id, None)
-    return _text_response(f"Evento {parsed.event_id} removido com sucesso.")
+    return _tool_response(
+        "calendar_delete_event",
+        f"Evento {parsed.event_id} removido com sucesso.",
+        {"event_id": parsed.event_id, "deleted": True},
+    )
 
 
-def _text_response(text: str) -> ToolCallResponse:
-    return ToolCallResponse(content=[TextContent(text=text)])
+def _event_summary(event: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "event_id": event["event_id"],
+        "title": event["title"],
+        "date": event["date"],
+        "time": event["time"],
+        "duration_minutes": event["duration_minutes"],
+    }
+
+
+def _tool_response(tool: str, text: str, result: dict[str, Any]) -> ToolCallResponse:
+    return ToolCallResponse(
+        content=[TextContent(text=text)],
+        structuredContent=StructuredContent(ok=True, tool=tool, result=result),
+    )

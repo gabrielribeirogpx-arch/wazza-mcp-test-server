@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.routers.mcp import router as mcp_router
-from app.schemas import ToolCallRequest
+from app.schemas import StructuredContent, StructuredError, TextContent, ToolCallRequest, ToolCallResponse
 from app.tools.registry import ToolExecutionError, get_tool_definitions, run_tool
 
 app = FastAPI(
@@ -48,11 +48,19 @@ def json_rpc_endpoint(request: dict[str, Any]):
             tool_call = ToolCallRequest.model_validate(request.get("params", {}))
             result = run_tool(tool_call.name, tool_call.arguments)
         except KeyError:
-            return _json_rpc_error(request_id, -32602, "Tool not found")
+            tool_name = request.get("params", {}).get("name", "unknown")
+            return _json_rpc_result(
+                request_id,
+                _tool_error_response(str(tool_name), "tool_not_found", "Tool not found").model_dump(exclude_none=True),
+            )
         except (ToolExecutionError, ValidationError, ValueError) as exc:
-            return _json_rpc_error(request_id, -32602, str(exc))
+            tool_name = request.get("params", {}).get("name", "unknown")
+            return _json_rpc_result(
+                request_id,
+                _tool_error_response(str(tool_name), "tool_error", str(exc)).model_dump(exclude_none=True),
+            )
 
-        return _json_rpc_result(request_id, result.model_dump())
+        return _json_rpc_result(request_id, result.model_dump(exclude_none=True))
 
     return _json_rpc_error(request_id, -32601, "Method not found")
 
@@ -72,3 +80,14 @@ def _json_rpc_error(request_id: Any, code: int, message: str) -> JSONResponse:
 
 
 app.include_router(mcp_router)
+
+
+def _tool_error_response(tool: str, code: str, message: str) -> ToolCallResponse:
+    return ToolCallResponse(
+        content=[TextContent(text=f"Não foi possível executar a ferramenta: {message}")],
+        structuredContent=StructuredContent(
+            ok=False,
+            tool=tool,
+            error=StructuredError(code=code, message=message),
+        ),
+    )

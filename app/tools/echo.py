@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.schemas import TextContent, ToolCallResponse, ToolDefinition
+from app.schemas import StructuredContent, TextContent, ToolCallResponse, ToolDefinition
 
 
 class EchoArguments(BaseModel):
@@ -20,4 +20,7 @@ TOOL_DEFINITION = ToolDefinition(
 
 def execute(arguments: dict[str, object]) -> ToolCallResponse:
     parsed = EchoArguments.model_validate(arguments)
-    return ToolCallResponse(content=[TextContent(text=parsed.text)])
+    return ToolCallResponse(
+        content=[TextContent(text=parsed.text)],
+        structuredContent=StructuredContent(ok=True, tool="echo", result={"text": parsed.text}),
+    )

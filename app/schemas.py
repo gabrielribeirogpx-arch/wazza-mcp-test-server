@@ -23,8 +23,21 @@ class TextContent(BaseModel):
     text: str
 
 
+class StructuredError(BaseModel):
+    code: str
+    message: str
+
+
+class StructuredContent(BaseModel):
+    ok: bool
+    tool: str
+    result: dict[str, Any] | None = None
+    error: StructuredError | None = None
+
+
 class ToolCallResponse(BaseModel):
     content: list[TextContent]
+    structuredContent: StructuredContent
 
 
 class ErrorDetail(BaseModel):

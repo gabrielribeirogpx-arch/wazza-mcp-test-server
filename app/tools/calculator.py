@@ -5,7 +5,7 @@ from decimal import Decimal, DivisionByZero, InvalidOperation
 
 from pydantic import BaseModel
 
-from app.schemas import TextContent, ToolCallResponse, ToolDefinition
+from app.schemas import StructuredContent, TextContent, ToolCallResponse, ToolDefinition
 
 _ALLOWED_PATTERN = re.compile(r"^[0-9\s+\-*/().]+$")
 _OPERATORS = {
@@ -34,7 +34,15 @@ TOOL_DEFINITION = ToolDefinition(
 def execute(arguments: dict[str, object]) -> ToolCallResponse:
     parsed = CalculatorArguments.model_validate(arguments)
     result = calculate(parsed.expression)
-    return ToolCallResponse(content=[TextContent(text=_format_decimal(result))])
+    formatted_result = _format_decimal(result)
+    return ToolCallResponse(
+        content=[TextContent(text=f"O resultado é {formatted_result}.")],
+        structuredContent=StructuredContent(
+            ok=True,
+            tool="calculate",
+            result={"expression": parsed.expression, "value": _decimal_to_json_value(result)},
+        ),
+    )
 
 
 def calculate(expression: str) -> Decimal:
@@ -74,3 +82,10 @@ def _format_decimal(value: Decimal) -> str:
     if normalized == normalized.to_integral():
         return str(normalized.quantize(Decimal("1")))
     return format(normalized, "f")
+
+
+def _decimal_to_json_value(value: Decimal) -> int | float:
+    normalized = value.normalize()
+    if normalized == normalized.to_integral():
+        return int(normalized)
+    return float(normalized)
